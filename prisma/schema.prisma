@@ -16,8 +16,9 @@ model Residential {
   isp         String
   asn         Int
   nodes       Int
-  zipCodeId   BigInt?
-  zipCode     ZipCode? @relation(fields: [zipCodeId], references: [id])
+
+  // Many-to-many relation with ZipCode
+  zipCodes    ResidentialZipCode[]
 
   @@unique([country, subdivision, city, isp, asn])
   @@map("residential")
@@ -31,8 +32,22 @@ model ZipCode {
   city        String
   createDate  DateTime @default(now()) @db.Timestamp
 
-  residentials Residential[]
+  // Many-to-many relation with Residential
+  residentials ResidentialZipCode[]
 
   @@map("zip_codes")
   @@index([country, subdivision, city])
+}
+
+model ResidentialZipCode {
+  id            BigInt      @id @default(autoincrement())
+  residentialId BigInt
+  zipCodeId     BigInt
+  createDate    DateTime    @default(now()) @db.Timestamp
+
+  residential   Residential @relation(fields: [residentialId], references: [id], onDelete: Cascade)
+  zipCode       ZipCode     @relation(fields: [zipCodeId], references: [id], onDelete: Cascade)
+
+  @@unique([residentialId, zipCodeId])
+  @@map("residential_zip_codes")
 }

@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { ResidentialService } from "../services/residential.service";
 import { HttpRequest } from "../utils/http";
-import { DataItemWithZip, CountryData } from "../types/residential.types";
+import { DataItemWithZipCodes, CountryData } from "../types/residential.types";
 import winston from "winston";
 
 const FormData = require("form-data");
@@ -127,7 +127,7 @@ export class ResidentialController {
                 isp,
                 asn,
                 nodes,
-                zip, // Теперь поддерживаем фильтрацию по ZIP
+                zip, // Поддерживаем фильтрацию по ZIP
                 skip = 0,
                 take,
             } = req.query;
@@ -147,7 +147,9 @@ export class ResidentialController {
             const data = await this.residentialService.getResidentials(filters);
 
             if (country) {
-                const transformedData = this.transformData(data as any[]);
+                const transformedData = this.transformData(
+                    data as DataItemWithZipCodes[]
+                );
                 res.json(transformedData);
             } else {
                 const transformedData = this.transformDataCountry(
@@ -226,7 +228,7 @@ export class ResidentialController {
         }
     }
 
-    private transformData(arr: DataItemWithZip[]): CountryData[] {
+    private transformData(arr: DataItemWithZipCodes[]): CountryData[] {
         const result: {
             [key: string]: {
                 divisions: {
@@ -238,8 +240,16 @@ export class ResidentialController {
         const regionNames = new Intl.DisplayNames(["en"], { type: "region" });
 
         arr.forEach((item) => {
-            const { country, city, subdivision, id, isp, asn, nodes, zipCode } =
-                item;
+            const {
+                country,
+                city,
+                subdivision,
+                id,
+                isp,
+                asn,
+                nodes,
+                zipCodes,
+            } = item;
 
             if (!result[country]) {
                 result[country] = { divisions: {} };
@@ -256,12 +266,15 @@ export class ResidentialController {
                 };
             }
 
+            // Извлекаем все ZIP-коды в массив
+            const zipCodesArray = zipCodes?.map((zc) => zc.zipCode.zip) || [];
+
             result[country].divisions[subdivision].cities[city].data.push({
                 id,
                 isp,
                 asn,
                 nodes,
-                zip: zipCode?.zip || null, // Включаем ZIP-код из relation
+                zips: zipCodesArray, // Теперь zips - это массив
             });
         });
 

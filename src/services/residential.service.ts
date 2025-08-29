@@ -53,7 +53,6 @@ export class ResidentialService {
                                 isp: item.isp,
                                 asn: item.asn,
                                 nodes: item.nodes,
-                                zipCodeId: undefined, // Будет заполнено позже
                             },
                         })
                     );
@@ -137,62 +136,65 @@ export class ResidentialService {
         try {
             logger.info("Starting ZIP code matching process");
 
-            // Получаем все резиденциальные записи без ZIP-кодов
-            const residentialRecords = await prisma.residential.findMany({
-                where: { zipCodeId: null },
-            });
+            // Сначала очистим все существующие связи many-to-many
+            await prisma.residentialZipCode.deleteMany();
+            logger.info("Cleared existing residential-zipcode relations");
 
-            let updatedCount = 0;
-            const UPDATE_BATCH_SIZE = 500;
+            // Получаем все резиденциальные записи
+            const residentialRecords = await prisma.residential.findMany();
 
-            for (
-                let i = 0;
-                i < residentialRecords.length;
-                i += UPDATE_BATCH_SIZE
-            ) {
-                const batch = residentialRecords.slice(
-                    i,
-                    i + UPDATE_BATCH_SIZE
-                );
+            let totalRelationsCreated = 0;
+            const BATCH_SIZE = 500;
 
-                const updates = await Promise.allSettled(
-                    batch.map(async (record) => {
-                        // Найти подходящие ZIP-коды для этой локации
-                        const matchingZipCodes = await prisma.zipCode.findMany({
-                            where: {
-                                country: record.country,
-                                subdivision: record.subdivision,
-                                city: record.city,
-                            },
-                            take: 1, // Берем первый подходящий ZIP-код
+            for (let i = 0; i < residentialRecords.length; i += BATCH_SIZE) {
+                const batch = residentialRecords.slice(i, i + BATCH_SIZE);
+
+                // Для каждой резиденциальной записи в батче
+                const relationPromises = batch.map(async (record) => {
+                    // Найти ВСЕ подходящие ZIP-коды для этой локации
+                    const matchingZipCodes = await prisma.zipCode.findMany({
+                        where: {
+                            country: record.country,
+                            subdivision: record.subdivision,
+                            city: record.city,
+                        },
+                    });
+
+                    // Создать связи many-to-many для ВСЕХ подходящих ZIP-кодов
+                    if (matchingZipCodes.length > 0) {
+                        const relations = matchingZipCodes.map((zipCode) => ({
+                            residentialId: record.id,
+                            zipCodeId: zipCode.id,
+                        }));
+
+                        await prisma.residentialZipCode.createMany({
+                            data: relations,
+                            skipDuplicates: true,
                         });
 
-                        if (matchingZipCodes.length > 0) {
-                            return prisma.residential.update({
-                                where: { id: record.id },
-                                data: { zipCodeId: matchingZipCodes[0].id },
-                            });
-                        }
-                        return null;
-                    })
-                );
+                        return matchingZipCodes.length;
+                    }
+                    return 0;
+                });
 
-                const successfulUpdates = updates.filter(
-                    (result) =>
-                        result.status === "fulfilled" && result.value !== null
-                ).length;
+                const results = await Promise.allSettled(relationPromises);
+                const batchRelationsCreated = results.reduce((sum, result) => {
+                    return (
+                        sum + (result.status === "fulfilled" ? result.value : 0)
+                    );
+                }, 0);
 
-                updatedCount += successfulUpdates;
+                totalRelationsCreated += batchRelationsCreated;
 
                 logger.info(
                     `Processed batch ${
-                        Math.floor(i / UPDATE_BATCH_SIZE) + 1
-                    }: ${successfulUpdates} updates`
+                        Math.floor(i / BATCH_SIZE) + 1
+                    }: ${batchRelationsCreated} relations created`
                 );
             }
 
             logger.info(
-                `ZIP code matching completed. Updated ${updatedCount} records`
+                `ZIP code matching completed. Created ${totalRelationsCreated} total relations`
             );
         } catch (error) {
             logger.error("Error matching ZIP codes:", error);
@@ -245,10 +247,14 @@ export class ResidentialService {
             if (asn) where.asn = asn;
         }
 
-        // Добавляем фильтрацию по ZIP-коду через relation
+        // Добавляем фильтрацию по ZIP-коду через many-to-many relation
         if (zip) {
-            where.zipCode = {
-                zip: zip,
+            where.zipCodes = {
+                some: {
+                    zipCode: {
+                        zip: zip,
+                    },
+                },
             };
         }
 
@@ -256,7 +262,11 @@ export class ResidentialService {
             where,
             skip,
             include: {
-                zipCode: true, // Включаем данные ZIP-кода в ответ
+                zipCodes: {
+                    include: {
+                        zipCode: true, // Включаем данные всех ZIP-кодов
+                    },
+                },
             },
         };
 

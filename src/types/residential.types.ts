@@ -6,14 +6,15 @@ export interface DataItem {
     isp: string;
     asn: number;
     nodes: number;
-    zip?: string;
 }
 
 export interface ZipCodeData {
+    id: bigint;
     zip: string;
     country: string;
     subdivision: string;
     city: string;
+    createDate: Date;
 }
 
 export interface CityData {
@@ -23,17 +24,8 @@ export interface CityData {
         isp: string;
         asn: number;
         nodes: number;
+        zips: string[];
     }>;
-}
-
-export interface DataItemWithZip extends DataItem {
-    zipCode?: {
-        id: bigint;
-        zip: string;
-        country: string;
-        subdivision: string;
-        city: string;
-    } | null;
 }
 
 export interface SubdivisionData {
@@ -52,4 +44,29 @@ export interface WebhookData {
     orderReference: string;
     merchantSignature: string;
     transactionStatus: string;
+}
+
+export interface ResidentialZipCodeRelation {
+    id: bigint;
+    residentialId: bigint;
+    zipCodeId: bigint;
+    createDate: Date;
+    zipCode: ZipCodeData;
+}
+
+export interface ResidentialWithZipCodes extends DataItem {
+    zipCodes?: ResidentialZipCodeRelation[];
+}
+
+export interface DataItemWithZipCodes extends DataItem {
+    zipCodes?: Array<{
+        id: bigint;
+        zipCode: {
+            id: bigint;
+            zip: string;
+            country: string;
+            subdivision: string;
+            city: string;
+        };
+    }>;
 }
