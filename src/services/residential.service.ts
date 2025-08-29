@@ -14,6 +14,8 @@ const logger = winston.createLogger({
 export class ResidentialService {
     async fetchAndSaveResidentialData(): Promise<void> {
         try {
+            logger.info(`Fetching records from API...`);
+
             const response = await HttpRequest.get(
                 "https://api.infatica.io/count-by-geo"
             );
@@ -84,6 +86,8 @@ export class ResidentialService {
 
     async fetchAndSaveZipCodes(): Promise<void> {
         try {
+            logger.info(`Fetching ZIP codes arrays...`);
+
             const response = await HttpRequest.post(
                 "https://api.infatica.io/zip-codes"
             );
