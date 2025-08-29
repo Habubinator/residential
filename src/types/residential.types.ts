@@ -8,6 +8,28 @@ export interface DataItem {
     nodes: number;
 }
 
+export interface DataCenterItem {
+    country: string;
+    city: string;
+    subdivision: string;
+    id: number;
+    isp: string;
+    asn: number;
+    zip: string;
+    nodes: number;
+}
+
+export interface MobileItem {
+    country: string;
+    city: string;
+    subdivision: string;
+    id: number;
+    isp: string;
+    asn: number;
+    zip: string;
+    nodes: number;
+}
+
 export interface ZipCodeData {
     id: bigint;
     zip: string;
@@ -24,7 +46,8 @@ export interface CityData {
         isp: string;
         asn: number;
         nodes: number;
-        zips: string[];
+        zips?: string[];
+        zip?: string;
     }>;
 }
 

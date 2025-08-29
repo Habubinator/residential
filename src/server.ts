@@ -3,6 +3,8 @@ import app from "./app";
 import { ServerConfig } from "./config/server.config";
 import { connectDatabase, disconnectDatabase } from "./config/database";
 import { ResidentialService } from "./services/residential.service";
+import { DataCenterService } from "./services/datacenter.service";
+import { MobileService } from "./services/mobile.service";
 import * as cron from "node-cron";
 import winston from "winston";
 
@@ -23,19 +25,59 @@ async function bootstrap() {
         // Connect to database
         await connectDatabase();
 
-        // Setup cron job
+        // Setup services
         const residentialService = new ResidentialService();
+        const dataCenterService = new DataCenterService();
+        const mobileService = new MobileService();
 
-        // Every 5 minutes cron job
+        // Every 5 minutes cron job for all data types
         cron.schedule("*/5 * * * *", async () => {
             console.log("Cron job started at:", new Date().toISOString());
             try {
-                await residentialService.fetchAndSaveZipCodes();
-                await residentialService.fetchAndSaveResidentialData();
-                console.log(
-                    "Cron job completed successfully at:",
-                    new Date().toISOString()
+                residentialService.fetchAndSaveZipCodes().then(async () => {
+                    console.log(
+                        "ZIP codes updated successfully at",
+                        new Date().toISOString()
+                    );
+                    residentialService
+                        .fetchAndSaveResidentialData()
+                        .then(() => {
+                            console.log(
+                                "Residential data updated successfully at",
+                                new Date().toISOString()
+                            );
+                        });
+                });
+            } catch (error) {
+                console.error(
+                    "Cron job failed at:",
+                    new Date().toISOString(),
+                    error
                 );
+            }
+
+            try {
+                dataCenterService.fetchAndSaveDataCenterData().then(() => {
+                    console.log(
+                        "Data center data updated successfully at",
+                        new Date().toISOString()
+                    );
+                });
+            } catch (error) {
+                console.error(
+                    "Cron job failed at:",
+                    new Date().toISOString(),
+                    error
+                );
+            }
+
+            try {
+                mobileService.fetchAndSaveMobileData().then(() => {
+                    console.log(
+                        "Mobile data updated successfully at",
+                        new Date().toISOString()
+                    );
+                });
             } catch (error) {
                 console.error(
                     "Cron job failed at:",

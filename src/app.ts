@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import { ResidentialController } from "./controllers/residential.controller";
+import { DataCenterController } from "./controllers/datacenter.controller";
+import { MobileController } from "./controllers/mobile.controller";
 import { ValidationMiddleware } from "./middlewares/validation.middleware";
 
 const app = express();
@@ -22,8 +24,10 @@ app.use(
 
 // Controllers
 const residentialController = new ResidentialController();
+const dataCenterController = new DataCenterController();
+const mobileController = new MobileController();
 
-// Routes
+// Residential Routes
 app.get(
     "/residential/fetch",
     residentialController.fetchResidentials.bind(residentialController)
@@ -49,6 +53,27 @@ app.get(
     ValidationMiddleware.validateSkip,
     ValidationMiddleware.validateTake,
     residentialController.getResidentials.bind(residentialController)
+);
+
+// Data Center Routes
+app.get(
+    "/datacenter/fetch",
+    dataCenterController.fetchDataCenters.bind(dataCenterController)
+);
+app.get(
+    "/datacenter",
+    ValidationMiddleware.validateSkip,
+    ValidationMiddleware.validateTake,
+    dataCenterController.getDataCenters.bind(dataCenterController)
+);
+
+// Mobile Routes
+app.get("/mobile/fetch", mobileController.fetchMobiles.bind(mobileController));
+app.get(
+    "/mobile",
+    ValidationMiddleware.validateSkip,
+    ValidationMiddleware.validateTake,
+    mobileController.getMobiles.bind(mobileController)
 );
 
 export default app;

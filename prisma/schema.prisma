@@ -24,6 +24,36 @@ model Residential {
   @@map("residential")
 }
 
+model DataCenter {
+  id          BigInt   @id @default(autoincrement())
+  createDate  DateTime @default(now()) @db.Timestamp
+  country     String   @db.VarChar(2)
+  subdivision String
+  city        String
+  isp         String
+  asn         Int
+  zip         String
+  nodes       Int
+
+  @@unique([country, subdivision, city, isp, asn, zip])
+  @@map("data_center")
+}
+
+model Mobile {
+  id          BigInt   @id @default(autoincrement())
+  createDate  DateTime @default(now()) @db.Timestamp
+  country     String   @db.VarChar(2)
+  subdivision String
+  city        String
+  isp         String
+  asn         Int
+  zip         String
+  nodes       Int
+
+  @@unique([country, subdivision, city, isp, asn, zip])
+  @@map("mobile")
+}
+
 model ZipCode {
   id          BigInt   @id @default(autoincrement())
   zip         String   @unique
