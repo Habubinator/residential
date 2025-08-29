@@ -1,0 +1,21 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Residential {
+  id          BigInt   @id @default(autoincrement())
+  createDate  DateTime @default(now()) @db.Timestamp
+  country     String   @db.VarChar(2)
+  subdivision String
+  city        String
+  isp         String
+  asn         Int
+  nodes       Int
+
+  @@map("residential")
+}
