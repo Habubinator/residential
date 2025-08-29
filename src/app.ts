@@ -37,6 +37,14 @@ app.get(
     residentialController.fetchISPData.bind(residentialController)
 );
 app.get(
+    "/residential/zip-codes/fetch",
+    residentialController.fetchZipCodes.bind(residentialController)
+);
+app.post(
+    "/residential/zip-codes/match",
+    residentialController.matchZipCodes.bind(residentialController)
+);
+app.get(
     "/residential",
     ValidationMiddleware.validateSkip,
     ValidationMiddleware.validateTake,

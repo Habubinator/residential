@@ -26,46 +26,176 @@ export class ResidentialService {
                 return;
             }
 
-            // Очищаємо дані перед збереженням нових записів
-            await this.clearResidentialData();
-
-            // Зберігаємо дані пакетами
-            const BATCH_SIZE = 5000;
+            // Upsert дані пакетами
+            const BATCH_SIZE = 1000; // Зменшуємо розмір для upsert операцій
             for (let i = 0; i < data.length; i += BATCH_SIZE) {
-                const batch = data
-                    .slice(i, i + BATCH_SIZE)
-                    .map((item: any) => ({
-                        country: item.country,
-                        subdivision: item.subdivision,
-                        city: item.city,
-                        isp: item.isp,
-                        asn: item.asn,
-                        nodes: item.nodes,
-                    }));
+                const batch = data.slice(i, i + BATCH_SIZE);
 
                 try {
-                    await prisma.residential.createMany({
-                        data: batch,
-                        skipDuplicates: true,
-                    });
+                    // Upsert кожного запису окремо для коректної обробки
+                    const upsertPromises = batch.map((item: any) =>
+                        prisma.residential.upsert({
+                            where: {
+                                country_subdivision_city_isp_asn: {
+                                    country: item.country,
+                                    subdivision: item.subdivision,
+                                    city: item.city,
+                                    isp: item.isp,
+                                    asn: item.asn,
+                                },
+                            },
+                            update: {
+                                nodes: item.nodes,
+                            },
+                            create: {
+                                country: item.country,
+                                subdivision: item.subdivision,
+                                city: item.city,
+                                isp: item.isp,
+                                asn: item.asn,
+                                nodes: item.nodes,
+                                zip: null, // Буде заповнено пізніше
+                            },
+                        })
+                    );
+
+                    await Promise.all(upsertPromises);
 
                     console.log(
-                        `Residential data saved successfully for batch starting at index ${i}:`,
+                        `Residential data upserted successfully for batch starting at index ${i}:`,
                         batch.length
                     );
 
                     if (batch.length < 1000) {
-                        console.log(`Residential data saved successfully`);
+                        console.log(`Residential data upserted successfully`);
                     }
                 } catch (error) {
                     console.error(
-                        "Error saving residential entities in batch:",
+                        "Error upserting residential entities in batch:",
                         error
                     );
                 }
             }
+
+            // After saving residential data, match ZIP codes
+            await this.matchZipCodes();
         } catch (error) {
             console.error("Error fetching data from API:", error);
+        }
+    }
+
+    async fetchAndSaveZipCodes(): Promise<void> {
+        try {
+            const response = await HttpRequest.post(
+                "https://api.infatica.io/zip-codes"
+            );
+            const zipData = response.data;
+
+            logger.info(`Fetched ${zipData.length} ZIP code arrays from API`);
+
+            // Flatten the array of arrays and save ZIP codes
+            const allZipCodes = zipData.flat().map((item: any) => ({
+                zip: item.zip,
+                country: item.country,
+                subdivision: item.subdivision,
+                city: item.city,
+            }));
+
+            // Upsert ZIP codes in batches
+            const BATCH_SIZE = 5000;
+            for (let i = 0; i < allZipCodes.length; i += BATCH_SIZE) {
+                const batch = allZipCodes.slice(i, i + BATCH_SIZE);
+
+                try {
+                    const upsertPromises = batch.map((zipCode: any) =>
+                        prisma.zipCode.upsert({
+                            where: { zip: zipCode.zip },
+                            update: {
+                                country: zipCode.country,
+                                subdivision: zipCode.subdivision,
+                                city: zipCode.city,
+                            },
+                            create: zipCode,
+                        })
+                    );
+
+                    await Promise.all(upsertPromises);
+                    logger.info(
+                        `ZIP codes batch upserted: ${batch.length} records`
+                    );
+                } catch (error) {
+                    logger.error("Error upserting ZIP codes batch:", error);
+                }
+            }
+
+            logger.info(`Total ZIP codes processed: ${allZipCodes.length}`);
+        } catch (error) {
+            logger.error("Error fetching ZIP codes from API:", error);
+        }
+    }
+
+    async matchZipCodes(): Promise<void> {
+        try {
+            logger.info("Starting ZIP code matching process");
+
+            // Get all ZIP codes
+            const zipCodes = await prisma.zipCode.findMany();
+
+            // Group ZIP codes by country, subdivision, and city for faster lookup
+            const zipMap = new Map<string, string[]>();
+
+            zipCodes.forEach((zipCode) => {
+                const key = `${zipCode.country}-${zipCode.subdivision}-${zipCode.city}`;
+                if (!zipMap.has(key)) {
+                    zipMap.set(key, []);
+                }
+                zipMap.get(key)!.push(zipCode.zip);
+            });
+
+            // Update residential data with matching ZIP codes
+            const residentialRecords = await prisma.residential.findMany({
+                where: { zip: null },
+            });
+
+            let updatedCount = 0;
+            const UPDATE_BATCH_SIZE = 500;
+
+            for (
+                let i = 0;
+                i < residentialRecords.length;
+                i += UPDATE_BATCH_SIZE
+            ) {
+                const batch = residentialRecords.slice(
+                    i,
+                    i + UPDATE_BATCH_SIZE
+                );
+
+                const updates = batch
+                    .map((record) => {
+                        const key = `${record.country}-${record.subdivision}-${record.city}`;
+                        const matchingZips = zipMap.get(key);
+
+                        if (matchingZips && matchingZips.length > 0) {
+                            return prisma.residential.update({
+                                where: { id: record.id },
+                                data: { zip: matchingZips[0] }, // Використовуємо перший ZIP код
+                            });
+                        }
+                        return null;
+                    })
+                    .filter(Boolean);
+
+                if (updates.length > 0) {
+                    await Promise.all(updates);
+                    updatedCount += updates.length;
+                }
+            }
+
+            logger.info(
+                `ZIP code matching completed. Updated ${updatedCount} records`
+            );
+        } catch (error) {
+            logger.error("Error matching ZIP codes:", error);
         }
     }
 
@@ -85,6 +215,7 @@ export class ResidentialService {
         isp?: string;
         asn?: number;
         nodes?: number;
+        zip?: string;
         skip?: number;
         take?: number;
     }) {
@@ -95,6 +226,7 @@ export class ResidentialService {
             isp,
             asn,
             nodes = 0,
+            zip,
             skip = 0,
             take,
         } = filters;
@@ -111,6 +243,7 @@ export class ResidentialService {
             if (city) where.city = city;
             if (isp) where.isp = isp;
             if (asn) where.asn = asn;
+            if (zip) where.zip = zip;
         }
 
         const queryOptions: any = {

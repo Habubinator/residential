@@ -6,6 +6,14 @@ export interface DataItem {
     isp: string;
     asn: number;
     nodes: number;
+    zip?: string;
+}
+
+export interface ZipCodeData {
+    zip: string;
+    country: string;
+    subdivision: string;
+    city: string;
 }
 
 export interface CityData {

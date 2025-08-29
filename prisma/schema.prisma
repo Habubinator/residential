@@ -16,6 +16,20 @@ model Residential {
   isp         String
   asn         Int
   nodes       Int
+  zip         String?
 
+  @@unique([country, subdivision, city, isp, asn])
   @@map("residential")
+}
+
+model ZipCode {
+  id          BigInt   @id @default(autoincrement())
+  zip         String   @unique
+  country     String   @db.VarChar(2)
+  subdivision String
+  city        String
+  createDate  DateTime @default(now()) @db.Timestamp
+
+  @@map("zip_codes")
+  @@index([country, subdivision, city])
 }

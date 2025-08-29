@@ -30,6 +30,7 @@ async function bootstrap() {
         cron.schedule("*/5 * * * *", async () => {
             console.log("Cron job started at:", new Date().toISOString());
             try {
+                await residentialService.fetchAndSaveZipCodes();
                 await residentialService.fetchAndSaveResidentialData();
                 console.log(
                     "Cron job completed successfully at:",

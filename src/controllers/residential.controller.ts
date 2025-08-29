@@ -127,6 +127,7 @@ export class ResidentialController {
                 isp,
                 asn,
                 nodes,
+                zip,
                 skip = 0,
                 take,
             } = req.query;
@@ -138,6 +139,7 @@ export class ResidentialController {
                 isp: isp as string,
                 asn: asn ? Number(asn) : undefined,
                 nodes: nodes ? Number(nodes) : undefined,
+                zip: zip as string,
                 skip: Number(skip),
                 take: take ? Number(take) : undefined,
             };
@@ -168,6 +170,26 @@ export class ResidentialController {
         } catch (error) {
             logger.error("Error in fetchISPData:", error);
             res.status(500).json({ error: "Failed to fetch ISP data" });
+        }
+    }
+
+    async fetchZipCodes(req: Request, res: Response): Promise<void> {
+        try {
+            await this.residentialService.fetchAndSaveZipCodes();
+            res.json({ message: "ZIP codes have been updated successfully." });
+        } catch (error) {
+            logger.error("Error in fetchZipCodes:", error);
+            res.status(500).json({ error: "Failed to fetch ZIP codes" });
+        }
+    }
+
+    async matchZipCodes(req: Request, res: Response): Promise<void> {
+        try {
+            await this.residentialService.matchZipCodes();
+            res.json({ message: "ZIP codes matching completed successfully." });
+        } catch (error) {
+            logger.error("Error in matchZipCodes:", error);
+            res.status(500).json({ error: "Failed to match ZIP codes" });
         }
     }
 
