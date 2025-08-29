@@ -16,7 +16,8 @@ model Residential {
   isp         String
   asn         Int
   nodes       Int
-  zip         String?
+  zipCodeId   BigInt?
+  zipCode     ZipCode? @relation(fields: [zipCodeId], references: [id])
 
   @@unique([country, subdivision, city, isp, asn])
   @@map("residential")
@@ -29,6 +30,8 @@ model ZipCode {
   subdivision String
   city        String
   createDate  DateTime @default(now()) @db.Timestamp
+
+  residentials Residential[]
 
   @@map("zip_codes")
   @@index([country, subdivision, city])

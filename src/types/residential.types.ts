@@ -26,6 +26,16 @@ export interface CityData {
     }>;
 }
 
+export interface DataItemWithZip extends DataItem {
+    zipCode?: {
+        id: bigint;
+        zip: string;
+        country: string;
+        subdivision: string;
+        city: string;
+    } | null;
+}
+
 export interface SubdivisionData {
     subdivision: string;
     subdivisionCode: number | null;

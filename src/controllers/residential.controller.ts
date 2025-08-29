@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { ResidentialService } from "../services/residential.service";
 import { HttpRequest } from "../utils/http";
-import { DataItem, CountryData } from "../types/residential.types";
+import { DataItemWithZip, CountryData } from "../types/residential.types";
 import winston from "winston";
 
 const FormData = require("form-data");
@@ -127,7 +127,7 @@ export class ResidentialController {
                 isp,
                 asn,
                 nodes,
-                zip,
+                zip, // Теперь поддерживаем фильтрацию по ZIP
                 skip = 0,
                 take,
             } = req.query;
@@ -139,7 +139,7 @@ export class ResidentialController {
                 isp: isp as string,
                 asn: asn ? Number(asn) : undefined,
                 nodes: nodes ? Number(nodes) : undefined,
-                zip: zip as string,
+                zip: zip as string, // Добавляем ZIP в фильтры
                 skip: Number(skip),
                 take: take ? Number(take) : undefined,
             };
@@ -226,7 +226,7 @@ export class ResidentialController {
         }
     }
 
-    private transformData(arr: DataItem[]): CountryData[] {
+    private transformData(arr: DataItemWithZip[]): CountryData[] {
         const result: {
             [key: string]: {
                 divisions: {
@@ -238,7 +238,8 @@ export class ResidentialController {
         const regionNames = new Intl.DisplayNames(["en"], { type: "region" });
 
         arr.forEach((item) => {
-            const { country, city, subdivision, id, isp, asn, nodes } = item;
+            const { country, city, subdivision, id, isp, asn, nodes, zipCode } =
+                item;
 
             if (!result[country]) {
                 result[country] = { divisions: {} };
@@ -260,6 +261,7 @@ export class ResidentialController {
                 isp,
                 asn,
                 nodes,
+                zip: zipCode?.zip || null, // Включаем ZIP-код из relation
             });
         });
 
