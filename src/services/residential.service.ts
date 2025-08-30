@@ -29,7 +29,7 @@ export class ResidentialService {
             }
 
             // Upsert данные пакетами
-            const BATCH_SIZE = 1000;
+            const BATCH_SIZE = 5000;
             for (let i = 0; i < data.length; i += BATCH_SIZE) {
                 const batch = data.slice(i, i + BATCH_SIZE);
 

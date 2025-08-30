@@ -1,10 +1,13 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-import { ResidentialController } from "./controllers/residential.controller";
-import { DataCenterController } from "./controllers/datacenter.controller";
-import { MobileController } from "./controllers/mobile.controller";
-import { ValidationMiddleware } from "./middlewares/validation.middleware";
+import { ValidationMiddleware } from "./middlewares";
+import {
+    PackageController,
+    MobileController,
+    DataCenterController,
+    ResidentialController,
+} from "./controllers";
 
 const app = express();
 
@@ -26,6 +29,7 @@ app.use(
 const residentialController = new ResidentialController();
 const dataCenterController = new DataCenterController();
 const mobileController = new MobileController();
+const packageController = new PackageController();
 
 // Residential Routes
 app.get(
@@ -74,6 +78,30 @@ app.get(
     ValidationMiddleware.validateSkip,
     ValidationMiddleware.validateTake,
     mobileController.getMobiles.bind(mobileController)
+);
+
+// Package Routes
+app.get(
+    "/packages/fetch",
+    packageController.fetchPackages.bind(packageController)
+);
+app.get(
+    "/packages",
+    ValidationMiddleware.validateSkip,
+    ValidationMiddleware.validateTake,
+    packageController.getPackages.bind(packageController)
+);
+app.get(
+    "/packages/:packageKey",
+    packageController.getPackageById.bind(packageController)
+);
+app.get(
+    "/packages/:packageId/traffic-history",
+    packageController.getPackageTrafficHistory.bind(packageController)
+);
+app.get(
+    "/packages/stats/overview",
+    packageController.getPackagesStats.bind(packageController)
 );
 
 export default app;

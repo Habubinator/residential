@@ -81,3 +81,40 @@ model ResidentialZipCode {
   @@unique([residentialId, zipCodeId])
   @@map("residential_zip_codes")
 }
+
+model Package {
+  id                  BigInt            @id @default(autoincrement())
+  packageKey          String            @unique
+  createdAt           DateTime
+  expiredAt           DateTime?
+  isSuspended         Boolean
+  isActive            Boolean
+  status              String
+  proxyCount          Int
+  commonLimit         BigInt?           
+  dailyLimit          BigInt?           
+  weeklyLimit         BigInt?           
+  monthlyLimit        BigInt?
+  dailyUsage          BigInt
+  weeklyUsage         BigInt
+  monthlyUsage        BigInt
+  commonUsage         BigInt
+  updateDate          DateTime          @default(now()) @db.Timestamp
+  
+  trafficHistory      PackageTrafficHistory[]
+
+  @@map("packages")
+}
+
+model PackageTrafficHistory {
+  id              BigInt    @id @default(autoincrement())
+  packageId       BigInt
+  date            DateTime  @db.Date
+  dailyUsage      BigInt   
+  createDate      DateTime  @default(now()) @db.Timestamp
+  
+  package         Package   @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  
+  @@unique([packageId, date])
+  @@map("package_traffic_history")
+}

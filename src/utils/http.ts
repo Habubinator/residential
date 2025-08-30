@@ -1,7 +1,7 @@
 import axios from "axios";
 
 export const HttpRequest = axios.create({
-    timeout: 20000,
+    timeout: 30000,
     headers: {
         "api-key": process.env.API_KEY,
     },

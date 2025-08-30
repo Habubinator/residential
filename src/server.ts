@@ -1,10 +1,12 @@
 import "dotenv/config";
 import app from "./app";
-import { ServerConfig } from "./config/server.config";
-import { connectDatabase, disconnectDatabase } from "./config/database";
-import { ResidentialService } from "./services/residential.service";
-import { DataCenterService } from "./services/datacenter.service";
-import { MobileService } from "./services/mobile.service";
+import { ServerConfig, connectDatabase, disconnectDatabase } from "./config";
+import {
+    PackageService,
+    MobileService,
+    DataCenterService,
+    ResidentialService,
+} from "./services";
 import * as cron from "node-cron";
 import winston from "winston";
 
@@ -29,25 +31,28 @@ async function bootstrap() {
         const residentialService = new ResidentialService();
         const dataCenterService = new DataCenterService();
         const mobileService = new MobileService();
+        const packageService = new PackageService();
 
         // Every 5 minutes cron job for all data types
-        cron.schedule("*/5 * * * *", async () => {
+        cron.schedule("*/10 * * * *", async () => {
             console.log("Cron job started at:", new Date().toISOString());
             try {
-                residentialService.fetchAndSaveZipCodes().then(async () => {
-                    console.log(
-                        "ZIP codes updated successfully at",
-                        new Date().toISOString()
-                    );
-                    residentialService
-                        .fetchAndSaveResidentialData()
-                        .then(() => {
-                            console.log(
-                                "Residential data updated successfully at",
-                                new Date().toISOString()
-                            );
-                        });
-                });
+                await residentialService
+                    .fetchAndSaveZipCodes()
+                    .then(async () => {
+                        console.log(
+                            "ZIP codes updated successfully at",
+                            new Date().toISOString()
+                        );
+                        residentialService
+                            .fetchAndSaveResidentialData()
+                            .then(() => {
+                                console.log(
+                                    "Residential data updated successfully at",
+                                    new Date().toISOString()
+                                );
+                            });
+                    });
             } catch (error) {
                 console.error(
                     "Cron job failed at:",
@@ -57,12 +62,14 @@ async function bootstrap() {
             }
 
             try {
-                dataCenterService.fetchAndSaveDataCenterData().then(() => {
-                    console.log(
-                        "Data center data updated successfully at",
-                        new Date().toISOString()
-                    );
-                });
+                await dataCenterService
+                    .fetchAndSaveDataCenterData()
+                    .then(() => {
+                        console.log(
+                            "Data center data updated successfully at",
+                            new Date().toISOString()
+                        );
+                    });
             } catch (error) {
                 console.error(
                     "Cron job failed at:",
@@ -72,7 +79,7 @@ async function bootstrap() {
             }
 
             try {
-                mobileService.fetchAndSaveMobileData().then(() => {
+                await mobileService.fetchAndSaveMobileData().then(() => {
                     console.log(
                         "Mobile data updated successfully at",
                         new Date().toISOString()
@@ -81,6 +88,21 @@ async function bootstrap() {
             } catch (error) {
                 console.error(
                     "Cron job failed at:",
+                    new Date().toISOString(),
+                    error
+                );
+            }
+
+            try {
+                await packageService.fetchAndSavePackageData().then(() => {
+                    console.log(
+                        "Packages data updated successfully at",
+                        new Date().toISOString()
+                    );
+                });
+            } catch (error) {
+                console.error(
+                    "Packages cron job failed at:",
                     new Date().toISOString(),
                     error
                 );
