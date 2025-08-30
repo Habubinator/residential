@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { PackageService } from "../services/package.service";
 import winston from "winston";
+import { prisma } from "../config";
 
 const logger = winston.createLogger({
     level: "info",
@@ -36,11 +37,11 @@ export class PackageController {
 
             const packages = await this.packageService.getPackages(filters);
 
-            // Преобразуем BigInt в строки для JSON
+            // FIXED: Proper BigInt to string conversion with null handling
             const responsePackages = packages.map((pkg) => ({
                 ...pkg,
                 id: pkg.id.toString(),
-                commonLimit: pkg.commonLimit.toString(),
+                commonLimit: pkg.commonLimit?.toString() || null,
                 dailyLimit: pkg.dailyLimit?.toString() || null,
                 weeklyLimit: pkg.weeklyLimit?.toString() || null,
                 monthlyLimit: pkg.monthlyLimit?.toString() || null,
@@ -76,11 +77,11 @@ export class PackageController {
                 return res.status(404).json({ error: "Package not found" });
             }
 
-            // Преобразуем BigInt в строки для JSON
+            // FIXED: Proper BigInt to string conversion with null handling
             const responsePackage = {
                 ...packageData,
                 id: packageData.id.toString(),
-                commonLimit: packageData.commonLimit.toString(),
+                commonLimit: packageData.commonLimit?.toString() || null,
                 dailyLimit: packageData.dailyLimit?.toString() || null,
                 weeklyLimit: packageData.weeklyLimit?.toString() || null,
                 monthlyLimit: packageData.monthlyLimit?.toString() || null,
@@ -116,8 +117,16 @@ export class PackageController {
                     .json({ error: "Package ID is required" });
             }
 
+            const packageData = await prisma.package.findUnique({
+                where: { packageKey: packageId },
+            });
+
+            if (!packageData) {
+                return res.status(404).json({ error: "Package not found" });
+            }
+
             const filters = {
-                packageId: BigInt(packageId),
+                packageId: packageData.id, // Use the actual BigInt id from database
                 days: Number(days),
             };
 
@@ -144,7 +153,6 @@ export class PackageController {
         try {
             const stats = await this.packageService.getPackagesStats();
 
-            // Преобразуем BigInt в строки для JSON
             const responseStats = {
                 ...stats,
                 totalLimit: stats.totalLimit.toString(),

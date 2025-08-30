@@ -34,7 +34,7 @@ async function bootstrap() {
         const packageService = new PackageService();
 
         // Every 5 minutes cron job for all data types
-        cron.schedule("*/10 * * * *", async () => {
+        cron.schedule("*/15 * * * *", async () => {
             console.log("Cron job started at:", new Date().toISOString());
             try {
                 await residentialService

@@ -172,10 +172,11 @@ export class PackageService {
 
         const packages = await prisma.package.findMany(queryOptions);
 
-        // Добавляем вычисляемое поле remaining
         return packages.map((pkg) => ({
             ...pkg,
-            remaining: pkg.commonLimit - pkg.commonUsage,
+            remaining: pkg.commonLimit
+                ? pkg.commonLimit - pkg.commonUsage
+                : BigInt(0),
         }));
     }
 
@@ -198,7 +199,9 @@ export class PackageService {
 
         return {
             ...packageData,
-            remaining: packageData.commonLimit - packageData.commonUsage,
+            remaining: packageData.commonLimit
+                ? packageData.commonLimit - packageData.commonUsage
+                : BigInt(0),
         };
     }
 
@@ -221,12 +224,13 @@ export class PackageService {
         });
     }
 
-    // Метод для получения статистики по всем пакетам
+    // Метод для получения статистики по всем пакетам - FIXED: proper BigInt operations
     async getPackagesStats() {
         const packages = await prisma.package.findMany();
 
+        // FIXED: Initialize with BigInt(0) and handle null values properly
         const totalLimit = packages.reduce(
-            (sum, pkg) => sum + pkg.commonLimit,
+            (sum, pkg) => sum + (pkg.commonLimit || BigInt(0)),
             BigInt(0)
         );
         const totalUsage = packages.reduce(
