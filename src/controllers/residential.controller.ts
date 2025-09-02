@@ -42,8 +42,8 @@ const fetchDataIsp = async () => {
 
     try {
         const formData = new FormData();
-        formData.append("email", "dentk222@gmail.com");
-        formData.append("password", "nuzpyx-soWpiw-kysdu0");
+        formData.append("email", process.env.INFATICA_EMAIL);
+        formData.append("password", process.env.INFATICA_PASS);
 
         const response = await HttpRequest.post(
             "https://dashboard.infatica.io/includes/api/client/isp_codes.php",
