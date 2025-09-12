@@ -6,6 +6,7 @@ import {
     MobileService,
     DataCenterService,
     ResidentialService,
+    BitrixService,
 } from "./services";
 import * as cron from "node-cron";
 import winston from "winston";
@@ -32,6 +33,7 @@ async function bootstrap() {
         const dataCenterService = new DataCenterService();
         const mobileService = new MobileService();
         const packageService = new PackageService();
+        const bitrixService = new BitrixService();
 
         // Every 5 minutes cron job for all data types
         cron.schedule("*/15 * * * *", async () => {
@@ -103,6 +105,24 @@ async function bootstrap() {
             } catch (error) {
                 console.error(
                     "Packages cron job failed at:",
+                    new Date().toISOString(),
+                    error
+                );
+            }
+
+            try {
+                console.log(
+                    "Bitrix sync cron job started at:",
+                    new Date().toISOString()
+                );
+                await bitrixService.syncCurrentPackageData();
+                console.log(
+                    "Bitrix24 sync completed successfully at",
+                    new Date().toISOString()
+                );
+            } catch (error) {
+                console.error(
+                    "Bitrix sync cron job failed at:",
                     new Date().toISOString(),
                     error
                 );
